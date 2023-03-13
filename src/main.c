@@ -1,205 +1,94 @@
 #include <ft_nm.h>
 
-void print_char(int fd)
+u_int8_t resolve_type(u_int8_t type)
 {
-    char c = 0;
+    u_int8_t rv;
 
-    read(fd, &c, sizeof(char));
-    printf("\t%.2x\n", c);
-}
-
-void print_short(int fd)
-{
-    short t = 0;
-
-    read(fd, &t, sizeof(short));
-    printf("%10u\t", t);
-    for (size_t i = 0; i < 2; i++)
+    switch (type & 0x0E)
     {
-        int target = (t & 0xFF00) >> 8;
-        printf("%.2x ", target);
-        t = t << 8;
+    case 0x00:
+        rv = 'U';
+        break;
+    case 0x02:
+        rv = 'A';
+        break;
+    case 0x0A:
+        rv = 'D';
+        break;
+    case 0x0C:
+        rv = 'N';
+        break;
+    case 0x0E:
+        rv = 'T';
+        break;
+    default:
+        return '?';
     }
-    printf("\n");
+
+    if ((type & 0x11) == 17)
+        rv += 32;
+    return rv;
 }
 
-void print_int(int fd)
+int handle_symbol_table()
 {
-    unsigned t = 0;
+    t_mach_o_symbol_table s_table = LOAD_STRUCTURE(t_mach_o_symbol_table);
 
-    read(fd, &t, sizeof(unsigned));
-    printf("%10u\t", t);
-    for (size_t i = 0; i < 4; i++)
+    size_t old_offset = get_offset();
+
+    for (size_t i = 0; i < s_table.symbols_count; i++)
     {
-        int target = (t & 0xFF000000) >> 24;
-        printf("%.2x ", target);
-        t = t << 8;
+        move_to_offset(s_table.symbols_offset + (sizeof(t_mach_o_symbol_entry) * i));
+        t_mach_o_symbol_entry entry = LOAD_STRUCTURE(t_mach_o_symbol_entry);
+
+        char type = resolve_type(entry.symbol_type);
+
+        if (type == 'U')
+            printf("%16s %c ", "", type);
+        else
+            printf("%.16llx %c ", entry.symbol_address, type);
+
+        move_to_offset(s_table.string_table_offset + entry.name_offset);
+        char c = 1;
+        while (c)
+        {
+            c = LOAD_STRUCTURE(char);
+            printf("%c", c);
+        }
+        printf("\n");
+        
     }
-    printf("\n");
-}
 
-void print_long(int fd)
-{
-    size_t t = 0;
-
-    read(fd, &t, sizeof(size_t));
-    printf("%10zu\t", t);
-    for (size_t i = 0; i < 8; i++)
-    {
-        int target = (t & 0xFF00000000000000) >> 56;
-        printf("%.2x ", target);
-        t = t << 8;
-    }
-    printf("\n");
-}
-
-void print_string(int fd, size_t len)
-{
-    char str[4096];
-
-    read(fd, str, len);
-    printf("%s\t", str);
-    for (size_t i = 0; i < len; i++)
-    {
-        printf("%.2x ", str[i]);
-    }
-    printf("\n");
-
-}
-
-void print_address(int fd)
-{
-    size_t addr;
-
-    read(fd, &addr, sizeof(size_t));
-
-    printf("%p\n", (void *)addr);
+    move_to_offset(old_offset);
+    
+    return 0;
 }
 
 int main(int argc, char **argv)
 {
-    if (argc < 2)
+    if (argc != 2)
         return 1;
-    int fd = open(argv[1], O_RDONLY);
-    if (!fd)
-        return 2;
-    
-    printf("\n== new header ==\n\n`");
+    open_file(argv[1]);
 
-    for (size_t i = 0; i < 8; i++)
+    t_mach_o_header header = LOAD_STRUCTURE(t_mach_o_header);
+
+    printf("%x\n", header.magic_number);
+    for (size_t i = 0; i < header.number_of_load_commands; i++)
     {
-        print_int(fd);
-    }
+        t_mach_o_load loaded = LOAD_STRUCTURE(t_mach_o_load);
 
-    printf("\n== new segment ==\n\n`");
+        printf("%.2x %.2x\n", loaded.type, loaded.size);
 
-
-    for (size_t i = 0; i < 1; i++)
-    {
-        print_int(fd);
-        print_int(fd);
-        print_string(fd, 16);
-        print_address(fd);
-        print_long(fd);
-        print_long(fd);
-        print_long(fd);
-        print_int(fd);
-        print_int(fd);
-        print_int(fd);
-        print_int(fd);
-    }
-
-    for (size_t i = 0; i < 4; i++)
-    {
-        printf("\n == new section ==\n\n");
-        print_string(fd, 16);
-        print_string(fd, 16);
-        print_address(fd);
-        print_long(fd);
-        print_int(fd);
-        print_int(fd);
-        print_int(fd);
-        print_int(fd);
-        print_int(fd);
-        print_int(fd);
-        print_int(fd);
-        print_int(fd);        
-    }
-
-    printf("\n == new OS Def ==\n\n");
-
-    print_int(fd);
-    print_int(fd);
-    print_int(fd);
-    print_int(fd);
-    print_int(fd);
-    print_int(fd);
-
-    printf("\n == new symbol_table ==\n\n");
-
-    print_int(fd);
-    print_int(fd);
-    print_int(fd);
-    print_int(fd);
-    print_int(fd);
-    print_int(fd);
-
-    printf("\n == new symbol_table_info ==\n\n");
-
-    print_int(fd);
-    print_int(fd);
-    print_int(fd);
-    print_int(fd);
-    print_int(fd);
-    print_int(fd);
-    print_int(fd);
-    print_int(fd);
-    print_int(fd);
-    print_int(fd);
-    print_int(fd);
-    print_int(fd);
-    print_int(fd);
-    print_int(fd);
-    print_int(fd);
-    print_int(fd);
-    print_int(fd);
-    print_int(fd);
-    print_int(fd);
-    print_int(fd);
-
-    int fd2 = open("main.o", O_RDONLY);
-
-    char skip[4096];
-    read(fd2, skip, 872);
-
-
-    for (size_t i = 0; i < 3; i++)
-    {
-        printf("\n == new symbol_table_load ==\n\n");
-        print_int(fd2);
-        print_char(fd2);
-        print_char(fd2);
-        print_short(fd2);
-        print_long(fd2);
+        switch (loaded.type)
+        {
+        case 0x02:
+            handle_symbol_table();
+            break;
+        
+        default:
+            break;
+        }
+        if (!read_bytes(loaded.size - sizeof(t_mach_o_load))) break;
     }
     
-
-
-
-
-    // read(fd2, skip, 920);
-
-    // int ret = 1;
-    // while (ret)
-    // {
-    //     char s = 0;
-    //     ret = read(fd2, &s, 1);
-    //     if (ret && s)
-    //         printf("%c", s);
-    // }
-    // printf("\n");
-    
-
-    close(fd);
-
 }
