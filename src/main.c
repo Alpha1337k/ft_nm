@@ -166,6 +166,7 @@ void print_elf(t_elf_header h)
         else
             printf("%16s %c %s\n", "", type, items[i].name);
     }
+    free(items);
     
 
 }
@@ -190,142 +191,8 @@ int main(int argc, char **argv)
         if (h.magic_number != 1179403647)
             abort();
         print_elf(h);
+        close_file();
     }
 
-    return 1;
-    
-
-
-    // t_elf_header h = LOAD_STRUCTURE(t_elf_header);
-
-    // PRINT_MACRO(print_int, h.magic_number);
-    // PRINT_MACRO(print_char, h.format_bits);
-    // PRINT_MACRO(print_char, h.endianness);
-    // PRINT_MACRO(print_char, h.elf_version);
-    // PRINT_MACRO(print_char, h.target_os);
-    // PRINT_MACRO(print_char, h.abi_version);
-    // PRINT_MACRO_S(print_string, h.padding, 7);
-    // PRINT_MACRO(print_short, h.file_type);
-    // PRINT_MACRO(print_char, h.architecture);
-    // PRINT_MACRO(print_int, h.elf_version2);
-
-    // printf("\n\n");
-
-    // u_int64_t sheader_offset = 0;
-    // if (h.format_bits == 2) {
-    //     t_elf_header_extended_64 ext = LOAD_STRUCTURE(t_elf_header_extended_64);
-    //     PRINT_MACRO(print_address, ext.entry_point_program);
-    //     PRINT_MACRO(print_address, ext.entry_point_pheader);
-    //     PRINT_MACRO(print_address, ext.entry_point_sheader);
-    //     sheader_offset = ext.entry_point_sheader;
-    // }
-    // else {
-    //     t_elf_header_extended_32 ext = LOAD_STRUCTURE(t_elf_header_extended_32);
-    //     PRINT_MACRO(print_address, ext.entry_point_program);
-    //     PRINT_MACRO(print_address, ext.entry_point_pheader);
-    //     PRINT_MACRO(print_address, ext.entry_point_sheader);       
-    //     sheader_offset = ext.entry_point_sheader;
-    // }
-    // t_elf_header_final fin = LOAD_STRUCTURE(t_elf_header_final);
-    // printf("\n\n");
-
-    // PRINT_MACRO(print_int, fin.flags);
-    // PRINT_MACRO(print_short, fin.header_size);
-    // PRINT_MACRO(print_short, fin.pheader_size);
-    // PRINT_MACRO(print_short, fin.pheader_len);
-    // PRINT_MACRO(print_short, fin.sheader_size);
-    // PRINT_MACRO(print_short, fin.sheader_len);
-    // PRINT_MACRO(print_short, fin.sheader_name_index);
-
-
-    // move_to_offset(sheader_offset);
-
-    // printf("\n\n");
-
-    // for (size_t i = 0; i < fin.sheader_len; i++)
-    // {
-    //     t_elf_sheader_64 sh = LOAD_STRUCTURE(t_elf_sheader_64);
-    
-    //     printf("%ld\n", i);
-    //     PRINT_MACRO(print_int, sh.sheader_name);
-    //     PRINT_MACRO(print_long, sh.section_type);
-    //     PRINT_MACRO(print_long, sh.flags);
-    //     PRINT_MACRO(print_long, sh.file_addr);
-    //     PRINT_MACRO(print_long, sh.file_offset);
-    //     PRINT_MACRO(print_long, sh.section_size);
-    //     PRINT_MACRO(print_int, sh.section_link_idx);
-    //     PRINT_MACRO(print_int, sh.section_info);
-    //     PRINT_MACRO(print_long, sh.section_alignment);
-    //     PRINT_MACRO(print_long, sh.section_total_size);
-
-    //     size_t cur_offset = get_offset();
-
-    //     move_to_offset(sh.file_offset);
-
-    //     if (sh.section_type == 2) {
-
-    //         for (size_t x = 0; x < sh.section_size / sh.section_total_size; x++)
-    //         {
-    //             printf("\t%ld\n", x);
-    //             t_elf_symbol_64 sym = LOAD_STRUCTURE(t_elf_symbol_64);
-    //             PRINT_MACRO(print_int,  sym.name);
-    //             PRINT_MACRO(print_char, sym.info);
-    //             PRINT_MACRO(print_char, sym.other);
-    //             PRINT_MACRO(print_short, sym.shndx);
-    //             PRINT_MACRO(print_long, sym.value);
-    //             PRINT_MACRO(print_long, sym.size);
-    //             size_t cur_offset2 = get_offset();
-    //             move_to_offset(sym.name + 18008);
-    //             char *b = &LOAD_STRUCTURE(char);
-
-    //             printf("%u %u\n", ELF64_ST_BIND(sym.info), ELF64_ST_TYPE(sym.info));
-
-                
-    //             printf("%p %s\n",b, b);
-    //             move_to_offset(cur_offset2);
-
-    //         }
-            
-    //     }
-
-    //     printf("\n\n");
-
-    //     move_to_offset(cur_offset);
-    // }
-
-    // t_mach_o_header_multi multi;
-    // t_mach_o_header header = LOAD_STRUCTURE(t_mach_o_header);
-    // if (header.magic_number != HEADER_MULTI && header.magic_number != HEADER_64BITS)
-    //     abort();
-    // if (header.magic_number == HEADER_MULTI)
-    // {
-    //     move_to_offset(0);
-    //     // multi is always b. endian
-    //     multi = LOAD_STRUCTURE(t_mach_o_header_multi);
-
-    //     // printf("%x\n", SWAP_ENDIAN(multi.file_offset));
-    //     set_base_offset(SWAP_ENDIAN(multi.file_offset));
-    //     header = LOAD_STRUCTURE(t_mach_o_header);
-    // }
-
-    // for (size_t i = 0; i < header.number_of_load_commands; i++)
-    // {
-    //     t_mach_o_load loaded = LOAD_STRUCTURE(t_mach_o_load);
-
-    //     // printf("%.2x %.2x\n", loaded.type, loaded.size);
-
-    //     switch (loaded.type)
-    //     {
-    //     case 0x02:
-    //         handle_symbol_table();
-    //         break;
-        
-    //     default:
-    //         break;
-    //     }
-    //     if (loaded.size == 0)
-    //         break;
-    //     if (!read_bytes(loaded.size - sizeof(t_mach_o_load))) break;
-    // }
-    
+    return 0;    
 }

@@ -50,3 +50,8 @@ int open_file(char *file)
     return 0;
 }
 
+void close_file()
+{
+    munmap(mapped.ptr, mapped.size);
+}
+

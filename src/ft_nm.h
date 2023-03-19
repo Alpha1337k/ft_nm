@@ -164,6 +164,7 @@ typedef struct s_reader
 } t_reader;
 
 int open_file(char *file);
+void close_file();
 void *read_bytes(size_t amount);
 void move_to_offset(size_t offset);
 void set_base_offset(size_t offset);
