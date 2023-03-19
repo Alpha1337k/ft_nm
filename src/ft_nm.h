@@ -1,6 +1,7 @@
 #ifndef FT_NM_H
 #define FT_NM_H
 
+#include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <fcntl.h>
@@ -24,6 +25,7 @@
 #define ELF64_ST_BIND(i)   ((i)>>4)
 #define ELF64_ST_TYPE(i)   ((i)&0xf)
 #define ELF64_ST_INFO(b,t) (((b)<<4)+((t)&0xf))
+#define ELF64_ST_VISIBILITY(o) ((o)&0x3)
 
 typedef struct s_elf_header
 {
@@ -86,6 +88,18 @@ typedef struct s_elf_symbol_64 {
 	u_int64_t	value;
 	u_int64_t	size;
 } t_elf_symbol_64;
+
+typedef struct s_elf_symbol_query {
+    t_elf_sheader_64 name;
+    t_elf_sheader_64 symbol;
+} t_elf_symbol_query;
+
+typedef struct s_elf_symbol_wrap
+{
+    t_elf_symbol_64 entry;
+    t_elf_sheader_64 *sheader;
+    char *name;
+} t_elf_symbol_wrap;
 
 
 typedef struct s_mach_o_header
