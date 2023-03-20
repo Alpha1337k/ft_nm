@@ -36,9 +36,10 @@ int open_file(char *file)
 
     struct stat s;
 
-    if (fstat(fd, &s) == -1) abort();
-    
-
+    if (fstat(fd, &s) == -1) {
+        printf("ft_nm: '%s': No such file\n", file);
+        exit(1);
+    }
 
     mapped.ptr = mmap(0, s.st_size, PROT_READ, MAP_PRIVATE, fd, 0);
     mapped.cur_offset = 0;
@@ -46,7 +47,7 @@ int open_file(char *file)
     mapped.size = s.st_size;
 
     if (mapped.ptr == (void *)-1)
-        abort();
+        assert(0);
     return 0;
 }
 

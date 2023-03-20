@@ -9,6 +9,7 @@
 #include <sys/stat.h>
 #include <sys/mman.h>
 #include <string.h>
+#include <ctype.h>
 
 #define HEADER_64BITS 4277009103
 #define HEADER_MULTI 3199925962
@@ -163,6 +164,13 @@ typedef struct s_reader
     size_t base_offset;
 } t_reader;
 
+typedef struct s_ft_nm
+{
+    u_int8_t sorttype; // 0 def 1 rev (-r) 2 no (-p)
+    u_int8_t filter; // 0 def 1 undefined (-u) 2 external (-g)
+    u_int8_t debug_syms; // 0 false 1 true (-a) 
+} t_ft_nm;
+
 int open_file(char *file);
 void close_file();
 void *read_bytes(size_t amount);
@@ -176,5 +184,13 @@ void print_int(int t);
 void print_long(long t);
 void print_string(u_int8_t *s, size_t len);
 void print_address(long addr);
+
+int no_sort(char *a, char *b);
+int reverse_sort(char *a, char *b);
+int normal_sort(char *a, char *b);
+
+int normal_filter(char type);
+int undefined_filter(char type);
+int external_filter(char type);
 
 #endif
