@@ -102,60 +102,6 @@ typedef struct s_elf_symbol_wrap
     char *name;
 } t_elf_symbol_wrap;
 
-
-typedef struct s_mach_o_header
-{
-    u_int32_t	magic_number;
-    u_int32_t	cpu_type;
-    u_int32_t	cpu_subtype;
-    u_int32_t	file_type;
-    u_int32_t	number_of_load_commands;
-    u_int32_t	size_of_load_commands;
-    u_int32_t	flags;
-    u_int32_t	reserved;
-} t_mach_o_header;
-
-typedef struct s_mach_o_header_multi
-{
-    u_int32_t	magic_number;
-    u_int32_t	binaries_count;
-    u_int32_t	cpu_type;
-    u_int32_t	cpu_subtype;
-    u_int32_t	file_offset;
-    u_int32_t	size;
-    u_int32_t	section_alignment;
-} t_mach_o_header_multi;
-
-typedef struct s_mach_o_load
-{
-    u_int32_t type;
-    u_int32_t size;
-} t_mach_o_load;
-
-typedef struct s_mach_o_symbol_table
-{
-    u_int32_t   symbols_offset;
-    u_int32_t   symbols_count;
-    u_int32_t   string_table_offset;
-    u_int32_t   string_table_size;
-} t_mach_o_symbol_table;
-
-typedef struct s_mach_o_symbol_entry
-{
-    u_int32_t   name_offset;
-    u_int8_t    symbol_type;
-    u_int8_t    section_number;
-    u_int16_t   data_info;
-    u_int64_t   symbol_address;
-} t_mach_o_symbol_entry ;
-
-typedef struct s_mach_o_symbol_wrap
-{
-    t_mach_o_symbol_entry entry;
-    char *name;
-} t_mach_o_symbol_wrap;
-
-
 typedef struct s_reader
 {
     char *ptr;
