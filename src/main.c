@@ -159,8 +159,8 @@ void print_elf(t_elf_header h, t_ft_nm options)
     t_elf_symbol_query q =  get_tables(fin.sheader_len, sheader_offset);
 
     if (q.name.sheader_name == 0 || q.symbol.sheader_name == 0) {
-        printf("ft_nm: fatal: name or symbol table not found\n");
-        exit(1);
+        printf("ft_nm: no symbols\n");
+        return;
     }
 
 
@@ -242,7 +242,8 @@ int main(int argc, char **argv)
         open_file(targets[i]);
         t_elf_header h = LOAD_STRUCTURE(t_elf_header);
         if (h.magic_number != 1179403647) {
-            printf("ft_nm: invalid file\n");
+            printf("ft_nm: %s: file format not recognized\n", targets[i]);
+            close_file();
             continue;
         }
         print_elf(h, options);
