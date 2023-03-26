@@ -25,6 +25,15 @@ errors = 0;
 
 def build():
 	os.system("cd tests && gcc hello_world.c -c -o out/hello_world.o")
+	os.system("cd tests && gcc hello_world.c -o out/hello_world")
+	os.system("cd tests && gcc libary.c -c -o out/libary.o")
+	os.system("cd tests && gcc out/libary.o out/hello_world.o -shared -o out/shared.so")
+
+	os.system("cd tests && gcc -m32 hello_world.c -c -o out/hello_world_32.o")
+	os.system("cd tests && gcc -m32 hello_world.c -m32 -c -o out/hello_world_32.o")
+	os.system("cd tests && gcc -m32 hello_world.c -o out/hello_world_32")
+	os.system("cd tests && gcc -m32 libary.c -c -o out/libary_32.o")
+	os.system("cd tests && gcc -m32 out/libary.o out/hello_world.o -shared -o out/shared_32.so")
 
 def check(command):
 	global total, errors
@@ -43,6 +52,7 @@ def clear():
 	os.system("rm -rf tests/out/*")
 
 build();
+
 print("ok lets go")
 for paramCombo in paramsCombos:
 	print(f"[{bcolors.UNDERLINE}TEST{bcolors.ENDC}] ## {bcolors.OKCYAN} {' '.join(paramCombo)} ./ft_nm {bcolors.ENDC} ## ", end='')
@@ -55,4 +65,6 @@ for filename in os.listdir('./tests/out'):
 			print(f"[{bcolors.UNDERLINE}TEST{bcolors.ENDC}] ## {bcolors.OKCYAN} {' '.join(paramCombo)} {f} {bcolors.ENDC} ## ", end='')
 			check(f" {' '.join(paramCombo)} {f}")
 print(f"{total - errors} out of {total} ran without errors. See {bcolors.UNDERLINE}test_results.txt{bcolors.ENDC} for the errors");
-clear()
+
+if (total == errors):
+	clear()

@@ -28,6 +28,28 @@
 #define ELF64_ST_INFO(b,t) (((b)<<4)+((t)&0xf))
 #define ELF64_ST_VISIBILITY(o) ((o)&0x3)
 
+#define MIGRATE_SHEADER(__type, __target) \
+    __type __old = LOAD_STRUCTURE(__type); \
+    __target.sheader_name = __old.sheader_name; \
+    __target.section_type = __old.section_type; \
+    __target.flags = __old.flags; \
+    __target.file_addr = __old.file_addr; \
+    __target.file_offset = __old.file_offset; \
+    __target.section_size = __old.section_size; \
+    __target.section_link_idx = __old.section_link_idx; \
+    __target.section_info = __old.section_info; \
+    __target.section_alignment = __old.section_alignment; \
+    __target.section_total_size = __old.section_total_size;
+
+#define MIGRATE_SYMBOL(__type, __target) \
+    __type __old = LOAD_STRUCTURE(__type); \
+    __target.name = __old.name; \
+    __target.info = __old.info; \
+    __target.other = __old.other; \
+    __target.shndx = __old.shndx; \
+    __target.value = __old.value; \
+    __target.size = __old.size;
+
 typedef struct s_elf_header
 {
     u_int32_t   magic_number;
@@ -81,6 +103,34 @@ typedef struct s_elf_sheader_64
     u_int64_t   section_total_size;
 } t_elf_sheader_64;
 
+typedef struct s_elf_sheader_32
+{
+    u_int32_t   sheader_name;
+    u_int32_t   section_type;
+    u_int32_t   flags;
+    u_int32_t   file_addr;
+    u_int32_t   file_offset;
+    u_int32_t   section_size;
+    u_int32_t   section_link_idx;
+    u_int32_t   section_info;
+    u_int32_t   section_alignment;
+    u_int32_t   section_total_size;
+} t_elf_sheader_32;
+
+typedef struct s_elf_sheader
+{
+    u_int32_t   sheader_name;
+    u_int32_t   section_type;
+    u_int64_t   flags;
+    u_int64_t   file_addr;
+    u_int64_t   file_offset;
+    u_int64_t   section_size;
+    u_int32_t   section_link_idx;
+    u_int32_t   section_info;
+    u_int64_t   section_alignment;
+    u_int64_t   section_total_size;
+} t_elf_sheader;
+
 typedef struct s_elf_symbol_64 {
 	u_int32_t	name;
 	u_int8_t	info;
@@ -90,15 +140,34 @@ typedef struct s_elf_symbol_64 {
 	u_int64_t	size;
 } t_elf_symbol_64;
 
+typedef struct s_elf_symbol_32 {
+	u_int32_t	name;
+	u_int8_t	info;
+	u_int8_t	other;
+	u_int16_t	shndx;
+	u_int32_t	value;
+	u_int32_t	size;
+} t_elf_symbol_32;
+
+typedef struct s_elf_symbol {
+	u_int32_t	name;
+	u_int8_t	info;
+	u_int8_t	other;
+	u_int16_t	shndx;
+	u_int64_t	value;
+	u_int64_t	size;
+} t_elf_symbol;
+
 typedef struct s_elf_symbol_query {
-    t_elf_sheader_64 name;
-    t_elf_sheader_64 symbol;
+    t_elf_sheader name;
+    t_elf_sheader symbol;
 } t_elf_symbol_query;
 
 typedef struct s_elf_symbol_wrap
 {
-    t_elf_symbol_64 entry;
-    t_elf_sheader_64 *sheader;
+    t_elf_symbol    entry;
+    char            has_sheader;
+    t_elf_sheader   sheader;
     char *name;
 } t_elf_symbol_wrap;
 
