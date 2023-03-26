@@ -142,11 +142,11 @@ typedef struct s_elf_symbol_64 {
 
 typedef struct s_elf_symbol_32 {
 	u_int32_t	name;
+	u_int32_t	value;
+	u_int32_t	size;
 	u_int8_t	info;
 	u_int8_t	other;
 	u_int16_t	shndx;
-	u_int32_t	value;
-	u_int32_t	size;
 } t_elf_symbol_32;
 
 typedef struct s_elf_symbol {
@@ -203,6 +203,7 @@ void print_address(long addr);
 int no_sort(char *a, char *b);
 int reverse_sort(char *a, char *b);
 int normal_sort(char *a, char *b);
+t_elf_symbol_wrap *elf_sort_symbol_table(t_elf_symbol_wrap *entries, size_t len, int (*f)(char *, char *));
 
 int normal_filter(char type);
 int undefined_filter(char type);

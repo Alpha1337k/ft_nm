@@ -57,7 +57,7 @@ t_elf_symbol_wrap *load_symbols(t_elf_symbol_query tables, u_int64_t count, u_in
         items[i].name = &LOAD_STRUCTURE(char);
         if (items[i].entry.shndx != 65521) {
             items[i].has_sheader = 1;
-            items[i].sheader = get_sheader(items[i].entry.shndx, sheader_offset, 1);
+            items[i].sheader = get_sheader(items[i].entry.shndx, sheader_offset, is_64_bit);
         }
         else
             items[i].has_sheader = 0;
@@ -74,26 +74,6 @@ t_elf_symbol_wrap *load_symbols(t_elf_symbol_query tables, u_int64_t count, u_in
     return items;
 }
 
-t_elf_symbol_wrap *elf_sort_symbol_table(t_elf_symbol_wrap *entries, size_t len, int (*f)(char *, char *))
-{
-    int sorted = 0;
-    while (!sorted)
-    {
-        sorted = 1;
-        for (size_t i = 0; i < len - 1; i++)
-        {
-            if (f(entries[i].name, entries[i + 1].name) > 0)
-            {
-                t_elf_symbol_wrap tmp = entries[i];
-                entries[i] = entries[i + 1];
-                entries[i + 1] = tmp;
-                sorted = 0;
-            }
-        }
-    }
-    return entries;    
-}
-
 char elf_resolve_type(t_elf_symbol_wrap item, t_elf_sheader name_header, t_ft_nm options)
 {
     u_int8_t type = ELF64_ST_TYPE(item.entry.info);
@@ -105,7 +85,7 @@ char elf_resolve_type(t_elf_symbol_wrap item, t_elf_sheader name_header, t_ft_nm
     if (item.has_sheader) {
         dprintf(2, "%d %ld %d ", item.sheader.section_type, item.sheader.flags, item.sheader.section_info);
     }
-    dprintf(2, "%d %d %d ", type, bind, visb);
+    dprintf(2, "%d %d %d %d ", item.entry.info, type, bind, visb);
     if (!item.has_sheader && options.debug_syms == 0) {
         dprintf(2, "NONE\n");
         return 0;
@@ -168,7 +148,7 @@ t_elf_symbol_query get_tables(size_t count, u_int64_t offset, char is_64bit) {
         }
         if (sh.section_type == 2) {
             rv.symbol = sh;
-            rv.name = get_sheader(sh.section_link_idx, offset, 0);
+            rv.name = get_sheader(sh.section_link_idx, offset, is_64bit);
             break;
         }
     }
@@ -198,13 +178,13 @@ void print_elf(t_elf_header h, t_ft_nm options)
 
     u_int64_t count = (q.symbol.section_size / q.symbol.section_total_size) - 1;
 
-    printf("%ld %ld\n", sheader_offset, count);
-    return;
 
     t_elf_sheader name_table = get_sheader(fin.sheader_name_index, sheader_offset, h.format_bits == 2);
     t_elf_symbol_wrap *items = load_symbols(q, count, sheader_offset, name_table, options, h.format_bits == 2);
 
     items = elf_sort_symbol_table(items, count, sorters[options.sorttype]);
+
+    int padding = h.format_bits == 2 ? 16 : 8;
 
     for (size_t i = 0; i < count; i++)
     {
@@ -216,9 +196,9 @@ void print_elf(t_elf_header h, t_ft_nm options)
         if (type == 0 || filters[options.filter](type) == 0)
             continue;
         if (type != 'U' && type != 'u' && type != 'w')
-            printf("%.16lx %c %s\n", items[i].entry.value, type, items[i].name);
+            printf("%.*lx %c %s\n", padding, items[i].entry.value, type, items[i].name);
         else
-            printf("%16s %c %s\n", "", type, items[i].name);
+            printf("%*s %c %s\n", padding, "", type, items[i].name);
     }
     free(items);
     
