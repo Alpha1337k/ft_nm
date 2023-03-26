@@ -18,7 +18,7 @@
                     ((num>>8)&0xff00) | \
                     ((num<<24)&0xff000000))
 
-#define LOAD_STRUCTURE(type) *(type *)read_bytes(sizeof(type));
+#define LOAD_STRUCTURE(type) *(type *)read_bytes(sizeof(type))
 
 #define PRINT_MACRO(type, target) printf("%30s: ", #target); type(target);
 #define PRINT_MACRO_S(type, target, len) printf("%30s: ", #target); type(target, len);
@@ -27,6 +27,9 @@
 #define ELF64_ST_TYPE(i)   ((i)&0xf)
 #define ELF64_ST_INFO(b,t) (((b)<<4)+((t)&0xf))
 #define ELF64_ST_VISIBILITY(o) ((o)&0x3)
+
+// returns -1 on fail
+#define VALIDATE_ASSERTION(query, msg) if (!(query)) {dprintf(2, "ft_nm: %s: %s\n", filename, msg); return -1;}
 
 #define MIGRATE_SHEADER(__type, __target) \
     __type __old = LOAD_STRUCTURE(__type); \
@@ -183,7 +186,8 @@ typedef struct s_ft_nm
 {
     u_int8_t sorttype; // 0 def 1 rev (-r) 2 no (-p)
     u_int8_t filter; // 0 def 1 undefined (-u) 2 external (-g)
-    u_int8_t debug_syms; // 0 false 1 true (-a) 
+    u_int8_t debug_syms; // 0 false 1 true (-a)
+    u_int8_t is_64_bit;
 } t_ft_nm;
 
 int open_file(char *file);
@@ -209,5 +213,10 @@ int normal_filter(char type);
 int undefined_filter(char type);
 int external_filter(char type);
 int combined_filters(char type);
+
+int validate_header(t_elf_header header, char *filename);
+
+void handle_elf(t_ft_nm options, char *filename);
+void next_file();
 
 #endif

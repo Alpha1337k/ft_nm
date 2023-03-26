@@ -24,8 +24,10 @@ void *read_bytes(size_t amount)
 
     mapped.cur_offset += amount;
 
-    if (mapped.cur_offset > mapped.size)
+    if (mapped.cur_offset > mapped.size) {
+        
         return 0;
+    }
 
     return rv;
 }
