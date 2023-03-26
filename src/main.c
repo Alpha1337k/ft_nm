@@ -29,22 +29,39 @@ t_elf_sheader get_sheader(u_int16_t index, u_int64_t start_offset, char is_64_bi
     return rv;
 }
 
+t_elf_symbol_query get_tables(size_t count, u_int64_t offset, char is_64bit) {
+    t_elf_symbol_query rv;
+    bzero(&rv, sizeof(rv));
+    u_int64_t cur_offset = get_offset();
+    move_to_offset(offset);
+    for (size_t i = 0; i < count; i++)
+    {
+        t_elf_sheader sh;
+        if (is_64bit) {
+            MIGRATE_SHEADER(t_elf_sheader_64, sh);
+        } else {
+            MIGRATE_SHEADER(t_elf_sheader_32, sh);
+        }
+        if (sh.section_type == 2) {
+            rv.symbol = sh;
+            rv.name = get_sheader(sh.section_link_idx, offset, is_64bit);
+            break;
+        }
+    }
+    move_to_offset(cur_offset);
+    return rv;
+}
+
 t_elf_symbol_wrap *load_symbols(t_elf_symbol_query tables, u_int64_t count, u_int64_t sheader_offset, t_elf_sheader name_header, t_ft_nm options, char is_64_bit)
 {
     u_int64_t cur_offset = get_offset();
     u_int64_t iteration_offset;
-    move_to_offset(tables.symbol.file_offset);
+    move_to_offset(tables.symbol.file_offset + (is_64_bit ? sizeof(t_elf_symbol_64) : sizeof(t_elf_symbol_32)));
 
     t_elf_symbol_wrap *items = malloc(sizeof(t_elf_symbol_wrap) * count);
-    assert(items != 0);
+    if (!items)
+        return 0;
 
-    // first one is always 0
-    if (is_64_bit) {
-        (void)LOAD_STRUCTURE(t_elf_symbol_64);
-    }
-    else {
-        (void)LOAD_STRUCTURE(t_elf_symbol_32);
-    }
     for (size_t i = 0; i < count; i++)
     {
         if (is_64_bit) {
@@ -61,7 +78,7 @@ t_elf_symbol_wrap *load_symbols(t_elf_symbol_query tables, u_int64_t count, u_in
         }
         else
             items[i].has_sheader = 0;
-        if (!*items[i].name && items[i].has_sheader && options.debug_syms == 1) {
+        if (!*items[i].name && items[i].has_sheader && (items[i].sheader.flags != 0 || items[i].entry.info != 0) && options.debug_syms == 1) {
             u_int64_t nested_offset = get_offset();
             move_to_offset(name_header.file_offset + items[i].sheader.sheader_name);
             items[i].name = &LOAD_STRUCTURE(char);
@@ -110,6 +127,9 @@ char elf_resolve_type(t_elf_symbol_wrap item, t_elf_sheader name_header, t_ft_nm
         rv = 'W';
     else if (strncmp(ss, ".bss", 4) == 0)
         rv = 'B';
+    else if (strncmp(ss, ".debug", 6) == 0) {
+        rv = 'N';
+    }
     else if (strncmp(ss, ".data", 5) == 0 || (item.sheader.flags & 0x3) == 0x3)
         rv = 'D';
     else if (strncmp(ss, ".text", 5) == 0)
@@ -126,37 +146,14 @@ char elf_resolve_type(t_elf_symbol_wrap item, t_elf_sheader name_header, t_ft_nm
             rv = 'T';
     }
 
-    if (bind != 1 && (bind == 2 && type == 0 && item.sheader.section_type != 0) == 0)
+    if (bind != 1 && rv != 'N' && (bind == 2 && type == 0 && item.sheader.section_type != 0) == 0)
         rv += 32;
 
     return rv;
 
 }
 
-t_elf_symbol_query get_tables(size_t count, u_int64_t offset, char is_64bit) {
-    t_elf_symbol_query rv;
-    bzero(&rv, sizeof(rv));
-    u_int64_t cur_offset = get_offset();
-    move_to_offset(offset);
-    for (size_t i = 0; i < count; i++)
-    {
-        t_elf_sheader sh;
-        if (is_64bit) {
-            MIGRATE_SHEADER(t_elf_sheader_64, sh);
-        } else {
-            MIGRATE_SHEADER(t_elf_sheader_32, sh);
-        }
-        if (sh.section_type == 2) {
-            rv.symbol = sh;
-            rv.name = get_sheader(sh.section_link_idx, offset, is_64bit);
-            break;
-        }
-    }
-    move_to_offset(cur_offset);
-    return rv;
-}
-
-void print_elf(t_elf_header h, t_ft_nm options)
+void print_elf(t_elf_header h, t_ft_nm options, char *filename)
 {
     u_int64_t sheader_offset = 0;
     if (h.format_bits == 2) {
@@ -171,7 +168,7 @@ void print_elf(t_elf_header h, t_ft_nm options)
     t_elf_symbol_query q =  get_tables(fin.sheader_len, sheader_offset, h.format_bits == 2);
 
     if (q.name.sheader_name == 0 || q.symbol.sheader_name == 0) {
-        printf("ft_nm: no symbols\n");
+        dprintf(2, "ft_nm: %s: no symbols\n", filename);
         return;
     }
 
@@ -181,6 +178,11 @@ void print_elf(t_elf_header h, t_ft_nm options)
 
     t_elf_sheader name_table = get_sheader(fin.sheader_name_index, sheader_offset, h.format_bits == 2);
     t_elf_symbol_wrap *items = load_symbols(q, count, sheader_offset, name_table, options, h.format_bits == 2);
+    if (!items)
+    {
+        dprintf(2, "ft_nm: malloc failed\n");
+        return;
+    }
 
     items = elf_sort_symbol_table(items, count, sorters[options.sorttype]);
 
@@ -188,7 +190,7 @@ void print_elf(t_elf_header h, t_ft_nm options)
 
     for (size_t i = 0; i < count; i++)
     {
-        if (!*items[i].name && options.debug_syms == 0)
+        if ((!*items[i].name && items[i].entry.value == 0) && options.debug_syms == 0)
             continue;
         dprintf(2, "''%30s''\t", items[i].name);
         char type = elf_resolve_type(items[i], name_table, options);
@@ -255,14 +257,21 @@ int main(int argc, char **argv)
     {
         if (targets[i][0] == '-')
             continue;
-        open_file(targets[i]);
-        t_elf_header h = LOAD_STRUCTURE(t_elf_header);
-        if (h.magic_number != 1179403647) {
-            printf("ft_nm: %s: file format not recognized\n", targets[i]);
-            close_file();
+        if (open_file(targets[i]) == -1) {
+            dprintf(2, "ft_nm: %s: opening file failed\n", targets[i]);
             continue;
         }
-        print_elf(h, options);
+        t_elf_header h = LOAD_STRUCTURE(t_elf_header);
+        if (h.magic_number != 1179403647) {
+            dprintf(2, "ft_nm: %s: file format not recognized\n", targets[i]);
+            close_file();
+            continue;
+        } if (h.architecture != 0x03 && h.architecture != 0x3E) {
+            dprintf(2, "ft_nm: %s: invalid architecture\n", targets[i]);
+            close_file();
+            continue;           
+        }
+        print_elf(h, options, targets[i]);
         close_file();
     }
 

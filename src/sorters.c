@@ -31,7 +31,7 @@ int undefined_filter(char type)
 
 int external_filter(char type)
 {
-	return isupper(type) || type == 'w';
+	return (isupper(type) && type != 'N') || type == 'w';
 }
 
 int combined_filters(char type)

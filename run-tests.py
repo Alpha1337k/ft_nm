@@ -42,7 +42,7 @@ def check(command):
 	res = subprocess.run(f"/bin/bash -c \"diff <(./ft_nm {command}) <(nm {command})\"", stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
 	if (res.returncode != 0):
 		print(f"[{bcolors.FAIL}KO{bcolors.ENDC}]");
-		errorFiles.write(f"\ndiff <(./ft_nm {command} 2> /dev/null) <(nm {command})\n");
+		errorFiles.write(f"\ndiff <(./ft_nm {command} 2> ./out) <(nm {command})\n");
 		errorFiles.write(res.stdout.decode("utf-8"))
 		errorFiles.write("\n-STDERR-\n" + res.stderr.decode("utf-8") + "--")
 		errors += 1;
@@ -51,20 +51,38 @@ def check(command):
 def clear():
 	os.system("rm -rf tests/out/*")
 
+def run_os_full():
+	all_files = subprocess.run("find / -type f -name *.o", stdout=subprocess.PIPE, shell=True).stdout.decode('utf-8').split('\n') + \
+				subprocess.run("find / -type f -name *.so", stdout=subprocess.PIPE, shell=True).stdout.decode('utf-8').split('\n') + \
+				subprocess.run("find / -type f -executable", stdout=subprocess.PIPE, shell=True).stdout.decode('utf-8').split('\n')
+	for filename in all_files:
+		if (os.path.isfile(filename)):
+			for paramCombo in paramsCombos:
+				print(f"[{bcolors.UNDERLINE}TEST{bcolors.ENDC}] ## {bcolors.OKCYAN} {' '.join(paramCombo)} {filename} {bcolors.ENDC} ## ", end='')
+				check(f" {' '.join(paramCombo)} {filename}")
+
+def run_nm():
+	for paramCombo in paramsCombos:
+		print(f"[{bcolors.UNDERLINE}TEST{bcolors.ENDC}] ## {bcolors.OKCYAN} {' '.join(paramCombo)} ./ft_nm {bcolors.ENDC} ## ", end='')
+		check(f"{' '.join(paramCombo)} ./ft_nm")
+
+def run_tests():
+	for filename in os.listdir('./tests/out'):
+		f = os.path.join('./tests/out', filename)
+		# checking if it is a file
+		if os.path.isfile(f):
+			for paramCombo in paramsCombos:
+				print(f"[{bcolors.UNDERLINE}TEST{bcolors.ENDC}] ## {bcolors.OKCYAN} {' '.join(paramCombo)} {f} {bcolors.ENDC} ## ", end='')
+				check(f" {' '.join(paramCombo)} {f}")
+
+
 build();
+run_tests();
 
 print("ok lets go")
-for paramCombo in paramsCombos:
-	print(f"[{bcolors.UNDERLINE}TEST{bcolors.ENDC}] ## {bcolors.OKCYAN} {' '.join(paramCombo)} ./ft_nm {bcolors.ENDC} ## ", end='')
-	check(f"{' '.join(paramCombo)} ./ft_nm")
-for filename in os.listdir('./tests/out'):
-	f = os.path.join('./tests/out', filename)
-	# checking if it is a file
-	if os.path.isfile(f):
-		for paramCombo in paramsCombos:
-			print(f"[{bcolors.UNDERLINE}TEST{bcolors.ENDC}] ## {bcolors.OKCYAN} {' '.join(paramCombo)} {f} {bcolors.ENDC} ## ", end='')
-			check(f" {' '.join(paramCombo)} {f}")
+	
+
 print(f"{total - errors} out of {total} ran without errors. See {bcolors.UNDERLINE}test_results.txt{bcolors.ENDC} for the errors");
 
-if (total == errors):
-	clear()
+# if (total == errors):
+# 	clear()
