@@ -18,7 +18,7 @@
                     ((num>>8)&0xff00) | \
                     ((num<<24)&0xff000000))
 
-#define LOAD_STRUCTURE(type) *(type *)read_bytes(sizeof(type))
+#define LOAD_STRUCTURE(type) (type *)read_bytes(sizeof(type), &error)
 
 #define PRINT_MACRO(type, target) printf("%30s: ", #target); type(target);
 #define PRINT_MACRO_S(type, target, len) printf("%30s: ", #target); type(target, len);
@@ -32,26 +32,28 @@
 #define VALIDATE_ASSERTION(query, msg) if (!(query)) {dprintf(2, "ft_nm: %s: %s\n", filename, msg); return -1;}
 
 #define MIGRATE_SHEADER(__type, __target) \
-    __type __old = LOAD_STRUCTURE(__type); \
-    __target.sheader_name = __old.sheader_name; \
-    __target.section_type = __old.section_type; \
-    __target.flags = __old.flags; \
-    __target.file_addr = __old.file_addr; \
-    __target.file_offset = __old.file_offset; \
-    __target.section_size = __old.section_size; \
-    __target.section_link_idx = __old.section_link_idx; \
-    __target.section_info = __old.section_info; \
-    __target.section_alignment = __old.section_alignment; \
-    __target.section_total_size = __old.section_total_size;
+    __type *__old = LOAD_STRUCTURE(__type); \
+    if (error == 0) { \
+    __target.sheader_name = __old->sheader_name; \
+    __target.section_type = __old->section_type; \
+    __target.flags = __old->flags; \
+    __target.file_addr = __old->file_addr; \
+    __target.file_offset = __old->file_offset; \
+    __target.section_size = __old->section_size; \
+    __target.section_link_idx = __old->section_link_idx; \
+    __target.section_info = __old->section_info; \
+    __target.section_alignment = __old->section_alignment; \
+    __target.section_total_size = __old->section_total_size; }
 
 #define MIGRATE_SYMBOL(__type, __target) \
-    __type __old = LOAD_STRUCTURE(__type); \
-    __target.name = __old.name; \
-    __target.info = __old.info; \
-    __target.other = __old.other; \
-    __target.shndx = __old.shndx; \
-    __target.value = __old.value; \
-    __target.size = __old.size;
+    __type *__old = LOAD_STRUCTURE(__type); \
+    if (error == 0) {              \
+    __target.name = __old->name; \
+    __target.info = __old->info; \
+    __target.other = __old->other; \
+    __target.shndx = __old->shndx; \
+    __target.value = __old->value; \
+    __target.size = __old->size; }
 
 typedef struct s_elf_header
 {
@@ -192,7 +194,7 @@ typedef struct s_ft_nm
 
 int open_file(char *file);
 void close_file();
-void *read_bytes(size_t amount);
+void *read_bytes(size_t amount, int *error);
 void move_to_offset(size_t offset);
 void set_base_offset(size_t offset);
 size_t get_offset();
@@ -203,6 +205,7 @@ void print_int(int t);
 void print_long(long t);
 void print_string(u_int8_t *s, size_t len);
 void print_address(long addr);
+void print_reader_error();
 
 int no_sort(char *a, char *b);
 int reverse_sort(char *a, char *b);

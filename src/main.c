@@ -1,6 +1,6 @@
 #include <ft_nm.h>
 
-t_ft_nm parse_options(int target_count, char **targets)
+t_ft_nm parse_options(size_t target_count, char **targets)
 {
     t_ft_nm options;
 
@@ -35,6 +35,7 @@ t_ft_nm parse_options(int target_count, char **targets)
             
         }
     }
+    return options;
 }
 
 int main(int argc, char **argv)
@@ -59,7 +60,12 @@ int main(int argc, char **argv)
             dprintf(2, "ft_nm: %s: opening file failed\n", targets[i]);
             continue;
         }
-        t_elf_header h = LOAD_STRUCTURE(t_elf_header);
+        int error = 0;
+        t_elf_header h = *LOAD_STRUCTURE(t_elf_header);
+        if (error) {
+            print_reader_error();
+            continue;
+        }
         options.is_64_bit = h.format_bits == 2;
         if (validate_header(h, targets[i]) == 0)
             handle_elf(options, targets[i]);

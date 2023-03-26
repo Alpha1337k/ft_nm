@@ -13,6 +13,8 @@ int (*filters[4])(char) = {
     combined_filters,
 };
 
+int error = 0;
+
 t_elf_sheader get_sheader(u_int16_t index, u_int64_t start_offset, char is_64_bit)
 {
     u_int64_t cur_offset = get_offset();
@@ -42,6 +44,8 @@ t_elf_symbol_query get_tables(size_t count, u_int64_t offset, char is_64bit) {
         } else {
             MIGRATE_SHEADER(t_elf_sheader_32, sh);
         }
+		if (error)
+			return rv;
         if (sh.section_type == 2) {
             rv.symbol = sh;
             rv.name = get_sheader(sh.section_link_idx, offset, is_64bit);
@@ -69,19 +73,36 @@ t_elf_symbol_wrap *load_symbols(t_elf_symbol_query tables, u_int64_t count, u_in
         } else {
             MIGRATE_SYMBOL(t_elf_symbol_32, items[i].entry);
         }
+		if (error) {
+			free(items);
+			return 0;
+		}
+
         iteration_offset = get_offset();
         move_to_offset(tables.name.file_offset + items[i].entry.name);
-        items[i].name = &LOAD_STRUCTURE(char);
+        items[i].name = LOAD_STRUCTURE(char);
+		if (error) {
+			free(items);
+			return 0;
+		}
         if (items[i].entry.shndx != 65521) {
             items[i].has_sheader = 1;
             items[i].sheader = get_sheader(items[i].entry.shndx, sheader_offset, options.is_64_bit);
+			if (error) {
+				free(items);
+				return 0;
+			}
         }
         else
             items[i].has_sheader = 0;
         if (!*items[i].name && items[i].has_sheader && (items[i].sheader.flags != 0 || items[i].entry.info != 0) && options.debug_syms == 1) {
             u_int64_t nested_offset = get_offset();
             move_to_offset(name_header.file_offset + items[i].sheader.sheader_name);
-            items[i].name = &LOAD_STRUCTURE(char);
+            items[i].name = LOAD_STRUCTURE(char);
+			if (error) {
+				free(items);
+				return 0;
+			}
             move_to_offset(nested_offset);
         }
         move_to_offset(iteration_offset);
@@ -116,7 +137,10 @@ char elf_resolve_type(t_elf_symbol_wrap item, t_elf_sheader name_header, t_ft_nm
 
     u_int64_t cur_offset = get_offset();
     move_to_offset(name_header.file_offset + item.sheader.sheader_name);
-    char *ss = &LOAD_STRUCTURE(char);
+    char *ss = LOAD_STRUCTURE(char);
+	if (error) {
+		return -1;
+	}
     move_to_offset(cur_offset);
 
     dprintf(2, "'%s' '%s'\n", ss, item.name);
@@ -125,7 +149,7 @@ char elf_resolve_type(t_elf_symbol_wrap item, t_elf_sheader name_header, t_ft_nm
         rv = 'W';
     else if (strncmp(ss, ".bss", 4) == 0)
         rv = 'B';
-    else if (strncmp(ss, ".debug", 6) == 0) {
+    else if (strncmp(ss, ".debug", 6) == 0 || strncmp(ss, ".comment", 8) == 0) {
         rv = 'N';
     }
     else if (strncmp(ss, ".data", 5) == 0 || (item.sheader.flags & 0x3) == 0x3)
@@ -143,23 +167,28 @@ char elf_resolve_type(t_elf_symbol_wrap item, t_elf_sheader name_header, t_ft_nm
         else
             rv = 'T';
     }
+	if (rv == 'W' && item.entry.value != 0)
+		return rv;
 
-    if (bind != 1 && rv != 'N' && (bind == 2 && type == 0 && item.sheader.section_type != 0) == 0)
-        rv += 32;
-
+    if (bind != 1)
+		rv += 32;
     return rv;
 
 }
 
 void print_elf(t_elf_symbol_wrap *items, u_int64_t count, t_elf_sheader name_table, t_ft_nm options)
 {
-    int padding = options.is_64_bit == 2 ? 16 : 8;
+    int padding = options.is_64_bit ? 16 : 8;
     for (size_t i = 0; i < count; i++)
     {
-        if ((!*items[i].name && items[i].entry.value == 0) && options.debug_syms == 0)
+        if ((!*items[i].name) && options.debug_syms == 0)
             continue;
         dprintf(2, "''%30s''\t", items[i].name);
         char type = elf_resolve_type(items[i], name_table, options);
+		if (type == -1) {
+			print_reader_error();
+			return;
+		}
 
         if (type == 0 || filters[options.filter](type) == 0)
             continue;
@@ -174,19 +203,29 @@ void handle_elf(t_ft_nm options, char *filename)
 {
     u_int64_t sheader_offset = 0;
     if (options.is_64_bit)
-        sheader_offset = (LOAD_STRUCTURE(t_elf_header_extended_64)).entry_point_sheader;
-    else
-        sheader_offset = (LOAD_STRUCTURE(t_elf_header_extended_32)).entry_point_sheader;    
-    t_elf_header_final fin = LOAD_STRUCTURE(t_elf_header_final);
+        sheader_offset = (*LOAD_STRUCTURE(t_elf_header_extended_64)).entry_point_sheader;
+    else {
+        sheader_offset = (*LOAD_STRUCTURE(t_elf_header_extended_32)).entry_point_sheader;
+	}
+
+	if (error) return print_reader_error();  
+    t_elf_header_final fin = *LOAD_STRUCTURE(t_elf_header_final);
+	if (error) return print_reader_error();
     t_elf_symbol_query query = get_tables(fin.sheader_len, sheader_offset, options.is_64_bit);
 
-    if (query.name.sheader_name == 0 || query.symbol.sheader_name == 0) {
-        dprintf(2, "ft_nm: %s: no symbols\n", filename);
+    if (query.name.sheader_name == 0 || query.symbol.sheader_name == 0 || error) {
+		if (!error)
+			dprintf(2, "ft_nm: %s: no symbols\n", filename);
+		else print_reader_error();
         return;
     }
 
     u_int64_t count = (query.symbol.section_size / query.symbol.section_total_size) - 1;
     t_elf_sheader name_table = get_sheader(fin.sheader_name_index, sheader_offset, options.is_64_bit);
+
+	if (error) {
+		return print_reader_error(); 
+	}
     t_elf_symbol_wrap *items = load_symbols(query, count, sheader_offset, name_table, options);
     if (!items)
     {
