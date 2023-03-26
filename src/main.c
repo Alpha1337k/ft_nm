@@ -6,10 +6,11 @@ int (*sorters[3])(char *, char *) = {
     no_sort
 };
 
-int (*filters[3])(char) = {
+int (*filters[4])(char) = {
     normal_filter,
     undefined_filter,
-    external_filter
+    external_filter,
+    combined_filters,
 };
 
 t_elf_sheader_64 *get_sheader(u_int16_t index, u_int64_t start_offset)
@@ -24,7 +25,7 @@ t_elf_sheader_64 *get_sheader(u_int16_t index, u_int64_t start_offset)
     return rv;
 }
 
-t_elf_symbol_wrap *load_symbols(t_elf_symbol_query tables, u_int64_t count, u_int64_t sheader_offset)
+t_elf_symbol_wrap *load_symbols(t_elf_symbol_query tables, u_int64_t count, u_int64_t sheader_offset, t_elf_sheader_64 *name_header, t_ft_nm options)
 {
     u_int64_t cur_offset = get_offset();
     u_int64_t iteration_offset;
@@ -33,6 +34,8 @@ t_elf_symbol_wrap *load_symbols(t_elf_symbol_query tables, u_int64_t count, u_in
     t_elf_symbol_wrap *items = malloc(sizeof(t_elf_symbol_wrap) * count);
     assert(items != 0);
 
+    // first one is always 0
+    (void)LOAD_STRUCTURE(t_elf_symbol_64);
     for (size_t i = 0; i < count; i++)
     {
         items[i].entry = LOAD_STRUCTURE(t_elf_symbol_64);
@@ -43,6 +46,14 @@ t_elf_symbol_wrap *load_symbols(t_elf_symbol_query tables, u_int64_t count, u_in
             items[i].sheader = get_sheader(items[i].entry.shndx, sheader_offset);
         else
             items[i].sheader = 0;
+        dprintf(2, "zz: %s %p\n", items[i].name, items[i].sheader);
+        if (!*items[i].name && items[i].sheader && options.debug_syms == 1) {
+            u_int64_t nested_offset = get_offset();
+            move_to_offset(name_header->file_offset + items[i].sheader->sheader_name);
+            items[i].name = &LOAD_STRUCTURE(char);
+            dprintf(2, "dd::%s\n", items[i].name);
+            move_to_offset(nested_offset);
+        }
         move_to_offset(iteration_offset);
     }
     move_to_offset(cur_offset);
@@ -50,7 +61,7 @@ t_elf_symbol_wrap *load_symbols(t_elf_symbol_query tables, u_int64_t count, u_in
     return items;
 }
 
-void elf_sort_symbol_table(t_elf_symbol_wrap *entries, size_t len, int (*f)(char *, char *))
+t_elf_symbol_wrap *elf_sort_symbol_table(t_elf_symbol_wrap *entries, size_t len, int (*f)(char *, char *))
 {
     int sorted = 0;
     while (!sorted)
@@ -66,44 +77,47 @@ void elf_sort_symbol_table(t_elf_symbol_wrap *entries, size_t len, int (*f)(char
                 sorted = 0;
             }
         }
-    }    
+    }
+    return entries;    
 }
 
-char elf_resolve_type(t_elf_symbol_64 symbol, t_elf_sheader_64 *header, t_elf_sheader_64 *name_header, t_ft_nm options)
+char elf_resolve_type(t_elf_symbol_wrap item, t_elf_sheader_64 *name_header, t_ft_nm options)
 {
-    u_int8_t type = ELF64_ST_TYPE(symbol.info);
-    u_int8_t bind = ELF64_ST_BIND(symbol.info);
-    u_int8_t visb = ELF64_ST_VISIBILITY(symbol.other);
+    u_int8_t type = ELF64_ST_TYPE(item.entry.info);
+    u_int8_t bind = ELF64_ST_BIND(item.entry.info);
+    u_int8_t visb = ELF64_ST_VISIBILITY(item.entry.other);
 
 
 
-    if (header) {
-        dprintf(2, "%d %ld %d ", header->section_type, header->flags, header->section_info);
+    if (item.sheader) {
+        dprintf(2, "%d %ld %d ", item.sheader->section_type, item.sheader->flags, item.sheader->section_info);
     }
     dprintf(2, "%d %d %d ", type, bind, visb);
-    if (!header && options.debug_syms == 0) {
-        dprintf(2, "\n");
+    if (!item.sheader && options.debug_syms == 0) {
+        dprintf(2, "NONE\n");
         return 0;
     }
 
-    if (!header && options.debug_syms && type == 4)
+    if (!item.sheader && options.debug_syms && type == 4)
         return 'a';
-    else if (!header && options.debug_syms)
+    else if (!item.sheader && options.debug_syms){
+        dprintf(2, "NONE\n");
         return 0;
-
+    }
     char rv = '?';
 
     u_int64_t cur_offset = get_offset();
-    move_to_offset(name_header->file_offset + header->sheader_name);
+    move_to_offset(name_header->file_offset + item.sheader->sheader_name);
     char *ss = &LOAD_STRUCTURE(char);
-    dprintf(2, "'%s'\n", ss);
     move_to_offset(cur_offset);
+
+    dprintf(2, "'%s' '%s'\n", ss, item.name);
 
     if (bind == 2)
         rv = 'W';
     else if (strcmp(ss, ".bss") == 0)
         rv = 'B';
-    else if (strcmp(ss, ".data") == 0 || (header->flags & 0x3) == 0x3)
+    else if (strcmp(ss, ".data") == 0 || (item.sheader->flags & 0x3) == 0x3)
         rv = 'D';
     else if (strcmp(ss, ".text") == 0)
         rv = 'T';
@@ -113,13 +127,13 @@ char elf_resolve_type(t_elf_symbol_64 symbol, t_elf_sheader_64 *header, t_elf_sh
         else
             rv = 'U';
     } else {
-        if ((header->flags & 0x1) == 0 && type != 2)
+        if ((item.sheader->flags & 0x1) == 0 && type != 2)
             rv = 'R';
         else
             rv = 'T';
     }
 
-    if (bind != 1 && (bind == 2 && type == 0 && header->section_type != 0) == 0)
+    if (bind != 1 && (bind == 2 && type == 0 && item.sheader->section_type != 0) == 0)
         rv += 32;
 
     return rv;
@@ -164,21 +178,22 @@ void print_elf(t_elf_header h, t_ft_nm options)
     }
 
 
-    u_int64_t count = q.symbol.section_size / q.symbol.section_total_size;
-    t_elf_symbol_wrap *items = load_symbols(q, count, sheader_offset);
+    u_int64_t count = (q.symbol.section_size / q.symbol.section_total_size) - 1;
     t_elf_sheader_64 *name_table = get_sheader(fin.sheader_name_index, sheader_offset);
+    t_elf_symbol_wrap *items = load_symbols(q, count, sheader_offset, name_table, options);
 
-    elf_sort_symbol_table(items, count, sorters[options.sorttype]);
+    items = elf_sort_symbol_table(items, count, sorters[options.sorttype]);
 
-    for (size_t i = 1; i < count; i++)
+    for (size_t i = 0; i < count; i++)
     {
         if (!*items[i].name && options.debug_syms == 0)
             continue;
-        dprintf(2, "%30s\t", items[i].name);
-        char type = elf_resolve_type(items[i].entry, items[i].sheader, name_table, options);
+        dprintf(2, "''%30s''\t", items[i].name);
+        char type = elf_resolve_type(items[i], name_table, options);
+
         if (type == 0 || filters[options.filter](type) == 0)
             continue;
-        if (items[i].entry.value != 0 || type == 'a')
+        if (type != 'U' && type != 'u' && type != 'w')
             printf("%.16lx %c %s\n", items[i].entry.value, type, items[i].name);
         else
             printf("%16s %c %s\n", "", type, items[i].name);
@@ -216,10 +231,10 @@ int main(int argc, char **argv)
                     options.sorttype = 2;
                     break;
                 case 'u':
-                    options.filter = 1;
+                    options.filter |= 0x1;
                     break;
                 case 'g':
-                    options.filter = 2;
+                    options.filter |= 0x2;
                     break;
                 case 'a':
                     options.debug_syms = 1;
@@ -233,7 +248,6 @@ int main(int argc, char **argv)
             
         }
     }
-    
 
     for (size_t i = 0; i < target_len; i++)
     {

@@ -138,5 +138,6 @@ int normal_sort(char *a, char *b);
 int normal_filter(char type);
 int undefined_filter(char type);
 int external_filter(char type);
+int combined_filters(char type);
 
 #endif

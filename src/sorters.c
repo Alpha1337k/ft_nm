@@ -7,7 +7,7 @@ int normal_sort(char *a, char *b)
 
 int reverse_sort(char *a, char *b)
 {
-	return strcmp(a, b) < 0;
+	return strcmp(b, a) > 0;
 }
 
 int no_sort(char *a, char *b)
@@ -32,4 +32,9 @@ int undefined_filter(char type)
 int external_filter(char type)
 {
 	return isupper(type) || type == 'w';
+}
+
+int combined_filters(char type)
+{
+	return undefined_filter(type) && external_filter(type);
 }
