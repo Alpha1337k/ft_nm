@@ -108,11 +108,11 @@ char elf_resolve_type(t_elf_symbol_wrap item, t_elf_sheader name_header, t_ft_nm
 
     if (bind == 2)
         rv = 'W';
-    else if (strcmp(ss, ".bss") == 0)
+    else if (strncmp(ss, ".bss", 4) == 0)
         rv = 'B';
-    else if (strcmp(ss, ".data") == 0 || (item.sheader.flags & 0x3) == 0x3)
+    else if (strncmp(ss, ".data", 5) == 0 || (item.sheader.flags & 0x3) == 0x3)
         rv = 'D';
-    else if (strcmp(ss, ".text") == 0)
+    else if (strncmp(ss, ".text", 5) == 0)
         rv = 'T';
     else if (strcmp(ss, "") == 0) {
         if (bind == 2)
