@@ -66,6 +66,21 @@ def run_nm():
 		print(f"[{bcolors.UNDERLINE}TEST{bcolors.ENDC}] ## {bcolors.OKCYAN} {' '.join(paramCombo)} ./ft_nm {bcolors.ENDC} ## ", end='')
 		check(f"{' '.join(paramCombo)} ./ft_nm")
 
+def input_tests():
+	items = ["", "invalid.txt", "run-tests.py", "/", "tests/forbidden.txt"]
+	for item in items:
+		print(f"[{bcolors.UNDERLINE}TEST{bcolors.ENDC}] ## {bcolors.OKCYAN} {item} {bcolors.ENDC} ## ", end='')
+		check(item);
+
+def noel_tests():
+	for filename in os.listdir('./tests/noel/'):
+		f = os.path.join('./tests/noel/', filename)
+		# checking if it is a file
+		if os.path.isfile(f):
+			for paramCombo in paramsCombos:
+				print(f"[{bcolors.UNDERLINE}TEST{bcolors.ENDC}] ## {bcolors.OKCYAN} {' '.join(paramCombo)} {f} {bcolors.ENDC} ## ", end='')
+				check(f" {' '.join(paramCombo)} {f}")
+
 def run_tests():
 	for filename in os.listdir('./tests/out'):
 		f = os.path.join('./tests/out', filename)
@@ -75,9 +90,11 @@ def run_tests():
 				print(f"[{bcolors.UNDERLINE}TEST{bcolors.ENDC}] ## {bcolors.OKCYAN} {' '.join(paramCombo)} {f} {bcolors.ENDC} ## ", end='')
 				check(f" {' '.join(paramCombo)} {f}")
 
-
 build();
+input_tests()
+noel_tests();
 run_tests();
+
 
 print("ok lets go")
 	

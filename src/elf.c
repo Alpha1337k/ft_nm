@@ -154,7 +154,7 @@ char elf_resolve_type(t_elf_symbol_wrap item, t_elf_sheader name_header, t_ft_nm
     }
     else if (strncmp(ss, ".data", 5) == 0 || (item.sheader.flags & 0x3) == 0x3)
         rv = 'D';
-    else if (strncmp(ss, ".text", 5) == 0)
+    else if (strncmp(ss, ".text", 5) == 0 || strncmp(ss, ".init", 5) == 0 || strncmp(ss, ".plt", 4) == 0 || strncmp(ss, ".fini", 5) == 0)
         rv = 'T';
     else if (strcmp(ss, "") == 0) {
         if (bind == 2)

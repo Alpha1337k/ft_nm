@@ -57,7 +57,6 @@ int main(int argc, char **argv)
         if (targets[i][0] == '-')
             continue;
         if (open_file(targets[i]) == -1) {
-            dprintf(2, "ft_nm: %s: opening file failed\n", targets[i]);
             continue;
         }
         int error = 0;
