@@ -199,12 +199,6 @@ void move_to_offset(size_t offset);
 void set_base_offset(size_t offset);
 size_t get_offset();
 
-void print_char(u_int8_t target);
-void print_short(short t);
-void print_int(int t);
-void print_long(long t);
-void print_string(u_int8_t *s, size_t len);
-void print_address(long addr);
 void print_reader_error();
 
 int no_sort(char *a, char *b);

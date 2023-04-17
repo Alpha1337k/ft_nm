@@ -94,7 +94,7 @@ build();
 input_tests()
 noel_tests();
 run_tests();
-
+run_os_full();
 
 print("ok lets go")
 	

@@ -121,7 +121,7 @@ char elf_resolve_type(t_elf_symbol_wrap item, t_elf_sheader name_header, t_ft_nm
     if (item.has_sheader) {
         dprintf(2, "%d %ld %d ", item.sheader.section_type, item.sheader.flags, item.sheader.section_info);
     }
-    dprintf(2, "%d %d %d %d ", item.entry.info, type, bind, visb);
+    dprintf(2, "%ld %d %d %d ", item.entry.value, type, bind, visb);
     if (!item.has_sheader && options.debug_syms == 0) {
         dprintf(2, "NONE\n");
         return 0;
@@ -145,33 +145,42 @@ char elf_resolve_type(t_elf_symbol_wrap item, t_elf_sheader name_header, t_ft_nm
 
     dprintf(2, "'%s' '%s'\n", ss, item.name);
 
-    if (bind == 2)
-        rv = 'W';
-    else if (strncmp(ss, ".bss", 4) == 0)
-        rv = 'B';
-    else if (strncmp(ss, ".debug", 6) == 0 || strncmp(ss, ".comment", 8) == 0) {
-        rv = 'N';
-    }
-    else if (strncmp(ss, ".data", 5) == 0 || (item.sheader.flags & 0x3) == 0x3)
-        rv = 'D';
-    else if (strncmp(ss, ".text", 5) == 0 || strncmp(ss, ".init", 5) == 0 || strncmp(ss, ".plt", 4) == 0 || strncmp(ss, ".fini", 5) == 0)
-        rv = 'T';
-    else if (strcmp(ss, "") == 0) {
-        if (bind == 2)
-            rv = 'W';
+    if (bind == 2) {
+        if (type == 1)
+            rv = 'V';
         else
-            rv = 'U';
-    } else {
-        if ((item.sheader.flags & 0x1) == 0 && type != 2)
+            rv = 'W';
+        if (item.entry.shndx == 0)
+            rv += 32;
+        return rv;
+    }
+    else if (item.entry.shndx == 0) {
+        rv = 'U';
+    }
+    else if (item.entry.shndx == 0xfff2) {
+        rv = 'C';
+    } else if (item.entry.shndx == 0xfff1) {
+        rv = 'A';
+    }
+    else if (item.sheader.section_type == 8) {
+        rv = 'B';
+    }
+    else if (1) {
+        if ((item.sheader.flags & 0x3) == 0x3)
+            rv = 'D';
+        else if ((item.sheader.flags & 0x6) == 0x6)
+            rv = 'T';
+        else if ((item.sheader.flags & 0x1) == 0 && item.sheader.flags & 0x2)
             rv = 'R';
         else
-            rv = 'T';
+            rv = 'N';
     }
-	if (rv == 'W' && item.entry.value != 0)
-		return rv;
 
-    if (bind != 1)
+
+    if ((bind & 0x1) == 0 && (rv != 'N' || strncmp(ss, ".debug", 6) != 0))
 		rv += 32;
+    if ((!*item.name) && options.debug_syms == 0 && item.entry.value != 2325)
+        return 0;
     return rv;
 
 }
@@ -181,10 +190,9 @@ void print_elf(t_elf_symbol_wrap *items, u_int64_t count, t_elf_sheader name_tab
     int padding = options.is_64_bit ? 16 : 8;
     for (size_t i = 0; i < count; i++)
     {
-        if ((!*items[i].name) && options.debug_syms == 0)
-            continue;
         dprintf(2, "''%30s''\t", items[i].name);
         char type = elf_resolve_type(items[i], name_table, options);
+
 		if (type == -1) {
 			print_reader_error();
 			return;

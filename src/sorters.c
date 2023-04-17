@@ -25,13 +25,12 @@ int normal_filter(char type)
 
 int undefined_filter(char type)
 {
-	char finds[] = "Uw";
-	return strchr(finds, type) != 0;
+	return (type == 'U' || type == 'w');
 }
 
 int external_filter(char type)
 {
-	return (isupper(type) && type != 'N') || type == 'w';
+	return ((type >= 65 && type <= 90) && type != 'N') || type == 'w';
 }
 
 int combined_filters(char type)
