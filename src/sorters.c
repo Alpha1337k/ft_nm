@@ -2,12 +2,12 @@
 
 int normal_sort(char *a, char *b)
 {
-	return strcmp(a, b) > 0;
+	return ft_strcmp(a, b) > 0;
 }
 
 int reverse_sort(char *a, char *b)
 {
-	return strcmp(b, a) > 0;
+	return ft_strcmp(b, a) > 0;
 }
 
 int no_sort(char *a, char *b)

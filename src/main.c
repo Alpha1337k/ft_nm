@@ -25,9 +25,11 @@ t_ft_nm parse_options(size_t target_count, char **targets)
                     break;
                 case 'a':
                     options.debug_syms = 1;
-                    break;                
+                    break;
                 default:
-                    printf("ft_nm: '%c' is an invalid paramter\n", targets[i][x]);
+                    ft_puts(2, "ft_nm: '");
+                    write(2, &targets[i][x], 1);
+                    ft_puts(2, "' is an invalid paramter\n");
                     exit(1);
                 }
             }

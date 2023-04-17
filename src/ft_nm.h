@@ -20,16 +20,13 @@
 
 #define LOAD_STRUCTURE(type) (type *)read_bytes(sizeof(type), &error)
 
-#define PRINT_MACRO(type, target) printf("%30s: ", #target); type(target);
-#define PRINT_MACRO_S(type, target, len) printf("%30s: ", #target); type(target, len);
-
 #define ELF64_ST_BIND(i)   ((i)>>4)
 #define ELF64_ST_TYPE(i)   ((i)&0xf)
 #define ELF64_ST_INFO(b,t) (((b)<<4)+((t)&0xf))
 #define ELF64_ST_VISIBILITY(o) ((o)&0x3)
 
 // returns -1 on fail
-#define VALIDATE_ASSERTION(query, msg) if (!(query)) {dprintf(2, "ft_nm: %s: %s\n", filename, msg); return -1;}
+#define VALIDATE_ASSERTION(query, msg) if (!(query)) {ft_puts(2, "ft_nm: '"); ft_puts(2, filename); ft_puts(2, ": "); ft_puts(2, msg); ft_puts(2, "\n"); return -1;}
 
 #define MIGRATE_SHEADER(__type, __target) \
     __type *__old = LOAD_STRUCTURE(__type); \
@@ -216,4 +213,12 @@ int validate_header(t_elf_header header, char *filename);
 void handle_elf(t_ft_nm options, char *filename);
 void next_file();
 
+/* Helpers */
+int		ft_strcmp(const char *s1, const char *s2);
+int		ft_strncmp(const char *s1, const char *s2, size_t n);
+void    ft_puts(int fd, char *str);
+void	*ft_memset(void *b, int c, size_t n);
+
+void	print_result_addr(u_int8_t padding, u_int64_t value, char type, char *name);
+void	print_result_empt(u_int8_t padding, char type, char *name);
 #endif
