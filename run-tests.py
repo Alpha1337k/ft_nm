@@ -67,7 +67,12 @@ def run_nm():
 		check(f"{' '.join(paramCombo)} ./ft_nm")
 
 def input_tests():
-	items = ["", "invalid.txt", "run-tests.py", "/", "tests/forbidden.txt"]
+	items = ["", "invalid.txt", "run-tests.py", "/", "tests/forbidden.txt", 
+	  		"tests/out/hello_world tests/out/hello_world_32",
+	  		"tests/out/hello_world tests/forbidden.txt",
+			"-a",
+			"-q"
+			]
 	for item in items:
 		print(f"[{bcolors.UNDERLINE}TEST{bcolors.ENDC}] ## {bcolors.OKCYAN} {item} {bcolors.ENDC} ## ", end='')
 		check(item);

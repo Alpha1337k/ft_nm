@@ -39,6 +39,17 @@ t_ft_nm parse_options(size_t target_count, char **targets)
     return options;
 }
 
+u_int32_t real_targets(int argc, char **argv)
+{
+    u_int32_t count = 0;
+    for (int i = 0; i < argc; i++)
+    {
+        if (argv[i][0] != '-') count++;
+    }
+
+    return count;
+}
+
 int main(int argc, char **argv)
 {
     char *fallback[1] = {"a.out"};
@@ -52,6 +63,7 @@ int main(int argc, char **argv)
         target_count = argc - 1;
     }
     t_ft_nm options = parse_options(target_count, targets);
+    u_int32_t real = real_targets(target_count, targets);
 
     for (size_t i = 0; i < target_count; i++)
     {
@@ -59,6 +71,11 @@ int main(int argc, char **argv)
             continue;
         if (open_file(targets[i]) == -1) {
             continue;
+        }
+        if (real > 1) {
+            ft_puts(1,"\n");
+            ft_puts(1, targets[i]);
+            ft_puts(1,":\n");
         }
         int error = 0;
         t_elf_header h = *LOAD_STRUCTURE(t_elf_header);
