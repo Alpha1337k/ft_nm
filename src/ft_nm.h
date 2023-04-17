@@ -11,13 +11,6 @@
 #include <string.h>
 #include <ctype.h>
 
-#define HEADER_64BITS 4277009103
-#define HEADER_MULTI 3199925962
-#define SWAP_ENDIAN(num) (((num>>24)&0xff) |   \
-                    ((num<<8)&0xff0000) |  \
-                    ((num>>8)&0xff00) | \
-                    ((num<<24)&0xff000000))
-
 #define LOAD_STRUCTURE(type) (type *)read_bytes(sizeof(type), &error)
 
 #define ELF64_ST_BIND(i)   ((i)>>4)
